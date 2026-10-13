@@ -1,5 +1,5 @@
 let command = process.argv[2];
-let input = process.argv[3];
+let input = process.argv.slice(3);
 
 console.log("command is :", command);
 console.log("input is : ",input);
@@ -9,7 +9,7 @@ function sum(a,b) {
     
 }
 function minus(a,b) {
-    console.log("sum is : ",Number(a) - Number(b));
+    console.log("minus is : ",Number(a) - Number(b));
     
 }
 function print(input) {
