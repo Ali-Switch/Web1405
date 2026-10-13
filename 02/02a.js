@@ -24,15 +24,15 @@ function print(input) {
     
 }
 
-if (command==="sum")) {
+if (command==="sum") {
     sum(input[0],input[1]);
 }
 
-else if (command==="minus")) {
+else if (command==="minus") {
     minus(input[0],input[1]);
 }
 
-else if (command==="print")) {
+else if (command==="print") {
     print(input);
 }
 
