@@ -1,0 +1,481 @@
+
+import { framework } from './07a-framework.js';
+import { writeFile, readFile, unlink, rmdir } from 'node:fs';
+
+const app = framework();
+const port = 3000;
+
+
+// CHECK USER
+function checkUser(request, callback){
+
+    let user = request.headers.user;
+    let pass = request.headers.pass;
+
+    readFile('db.json', function(error, fileData){
+
+        if(error){
+            console.log("error reading db.json", error);
+            callback(error, null);
+        }
+        else{
+            fileData = fileData.toString();
+            fileData = JSON.parse(fileData);
+
+            let found = false;
+
+            for(let x of fileData.data){
+
+                if(
+                    x.name === user &&
+                    x.pass === pass &&
+                    x.type === 'admin'
+                ){
+                    found = true;
+                    break;
+                }
+
+            }
+
+            if(!found){
+                callback(null, false);
+            }
+            else{
+                callback(null, true);
+            }
+        }
+
+    });
+
+}
+
+
+// SUM
+app.get('sum', function(request, response){
+
+    let items = request.url.split("/");
+
+    response.writeHead(200);
+    response.write((Number(items[2]) + Number(items[3])).toString());
+    response.end();
+
+});
+
+
+// CREATE FILE
+app.get('createFile', function (request, response){
+
+    let items = request.url.split("/");
+
+    writeFile(items[2], items[3], function(error){
+
+        if(error){
+            console.log('error', error);
+
+            response.writeHead(500);
+            response.write("createFile error");
+            response.end();
+        }
+        else{
+            console.log("createFile done");
+
+            response.writeHead(200);
+            response.write("createFile done");
+            response.end();
+        }
+
+    });
+
+});
+
+
+// READ FILE
+app.get('readFile', function (request, response){
+
+    let items = request.url.split("/");
+
+    readFile(items[2], function(error, body){
+
+        if(error){
+            response.writeHead(500);
+            response.write("readFile error");
+            response.end();
+        }
+        else{
+            console.log("readFile done");
+
+            response.writeHead(200);
+            response.write(body);
+            response.end();
+        }
+
+    });
+
+});
+
+
+// DELETE FILE
+app.get('deleteFile', function(request, response){
+
+    let items = request.url.split("/");
+
+    unlink(items[2], function(error){
+
+        if(error){
+            console.log("deleteFile error", error);
+
+            response.writeHead(500);
+            response.write("deleteFile error");
+            response.end();
+        }
+        else{
+            console.log("deleteFile done");
+
+            response.writeHead(200);
+            response.write("deleteFile done");
+            response.end();
+        }
+
+    });
+
+});
+
+
+// DELETE FILE OR FOLDER
+app.get('delete', function(request, response){
+
+    let items = request.url.split("/");
+
+    unlink(items[2], function(error){
+
+        if(error){
+
+            console.log("deleteFile error", error);
+
+            if(error.code === 'EPERM' || error.code === 'EISDIR'){
+
+                rmdir(items[2], function(error){
+
+                    if(error){
+                        console.log("delete error", error);
+
+                        response.writeHead(500);
+                        response.write("delete error");
+                        response.end();
+                    }
+                    else{
+                        console.log("delete done (folder)");
+
+                        response.writeHead(200);
+                        response.write("delete done (folder)");
+                        response.end();
+                    }
+
+                });
+
+            }
+            else{
+                response.writeHead(500);
+                response.write("delete error");
+                response.end();
+            }
+
+        }
+        else{
+            console.log("delete done (file)");
+
+            response.writeHead(200);
+            response.write("delete done (file)");
+            response.end();
+        }
+
+    });
+
+});
+
+
+// SIGNUP
+app.post('user', function(request, response){
+
+    readFile('db.json', function(error, fileData){
+
+        if(error){
+            console.log("error reading db.json", error);
+
+            response.writeHead(500);
+            response.write("error reading db.json");
+            response.end();
+        }
+        else{
+
+            function getRandomInt(max) {
+                return Math.floor(Math.random() * max);
+            }
+
+            fileData = fileData.toString();
+            fileData = JSON.parse(fileData);
+
+            request.data.id = (10000000 + getRandomInt(1000000)).toString();
+
+            fileData.data.push(request.data);
+
+            let newData = JSON.stringify(fileData);
+
+            writeFile('db.json', newData, function(error){
+
+                if(error){
+                    console.log("error writing db.json", error);
+
+                    response.writeHead(500);
+                    response.write("signup error");
+                    response.end();
+                }
+                else{
+                    console.log("signup done");
+
+                    response.writeHead(200);
+                    response.write("signup done");
+                    response.end();
+                }
+
+            });
+
+        }
+
+    });
+
+});
+
+
+// GET USER
+app.get('user', function(request, response){
+
+    let items = request.url.split("/");
+    let userId = items[2];
+
+    readFile('db.json', function(error, fileData){
+
+        if(error){
+            console.log("error reading db.json", error);
+
+            response.writeHead(500);
+            response.write("error reading db.json");
+            response.end();
+        }
+        else{
+            fileData = fileData.toString();
+            fileData = JSON.parse(fileData);
+
+            let found = false;
+
+            for(let x of fileData.data){
+
+                if(x.id === userId){
+
+                    found = true;
+
+                    console.log("user found.");
+
+                    response.writeHead(200);
+                    response.write(JSON.stringify(x));
+                    response.end();
+
+                    break;
+                }
+
+            }
+
+            if(!found){
+                console.log("user not found.");
+
+                response.writeHead(404);
+                response.write("user not found.");
+                response.end();
+            }
+
+        }
+
+    });
+
+});
+
+
+// DELETE USER
+app.delete('user', function(request, response){
+
+    let items = request.url.split("/");
+    let userId = items[2];
+
+    // AUTHENTICATION
+    checkUser(request, function(error, result){
+
+        if(error){
+            console.log("system error");
+
+            response.writeHead(500);
+            response.write("authentication error");
+            response.end();
+
+            return;
+        }
+
+        if(result === false){
+            console.log("admin not found");
+
+            response.writeHead(403);
+            response.write("invalid user and/or pass");
+            response.end();
+
+            return;
+        }
+
+        // DELETE USER
+        console.log("admin found");
+
+        readFile('db.json', function(error, fileData){
+
+            if(error){
+                console.log("error reading db.json", error);
+
+                response.writeHead(500);
+                response.write("error reading db.json");
+                response.end();
+
+                return;
+            }
+
+            fileData = fileData.toString();
+            fileData = JSON.parse(fileData);
+
+            let found = false;
+
+            for(let i = 0; i < fileData.data.length; i++){
+
+                if(fileData.data[i].id === userId){
+
+                    found = true;
+
+                    fileData.data.splice(i, 1);
+
+                    break;
+                }
+
+            }
+
+            if(!found){
+                console.log("user not found");
+
+                response.writeHead(404);
+                response.write("user not found");
+                response.end();
+            }
+            else{
+
+                fileData = JSON.stringify(fileData);
+
+                writeFile('db.json', fileData, function(error){
+
+                    if(error){
+                        console.log("error writing db.json", error);
+
+                        response.writeHead(500);
+                        response.write("error writing db.json");
+                        response.end();
+                    }
+                    else{
+                        console.log("removeUser done");
+
+                        response.writeHead(200);
+                        response.write("removeUser done");
+                        response.end();
+                    }
+
+                });
+
+            }
+
+        });
+
+    });
+
+});
+
+
+// EDIT USER
+app.put('user', function(request, response){
+
+    let userId = request.data.id;
+
+    readFile('db.json', function(error, fileData){
+
+        if(error){
+            console.log("error reading db.json", error);
+
+            response.writeHead(500);
+            response.write("error reading db.json");
+            response.end();
+        }
+        else{
+            fileData = fileData.toString();
+            fileData = JSON.parse(fileData);
+
+            let found = false;
+
+            for(let i = 0; i < fileData.data.length; i++){
+
+                if(fileData.data[i].id === userId){
+
+                    found = true;
+
+                    fileData.data.splice(i, 1, request.data);
+
+                    break;
+                }
+
+            }
+
+            if(!found){
+                console.log("user not found");
+
+                response.writeHead(404);
+                response.write("user not found");
+                response.end();
+            }
+            else{
+
+                fileData = JSON.stringify(fileData);
+
+                writeFile('db.json', fileData, function(error){
+
+                    if(error){
+                        console.log("error writing db.json", error);
+
+                        response.writeHead(500);
+                        response.write("error writing db.json");
+                        response.end();
+                    }
+                    else{
+                        console.log("editUser done");
+
+                        response.writeHead(200);
+                        response.write("editUser done");
+                        response.end();
+                    }
+
+                });
+
+            }
+
+        }
+
+    });
+
+});
+
+
+// LISTEN
+app.listen(port, function(){
+
+    console.log('app listening on port: ', port);
+
+});
